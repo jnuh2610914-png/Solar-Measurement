@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Lora", "Georgia", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Custom utility styles for rendering markdown dynamically in the Natural Tones theme */
+.markdown-body h1 {
+  font-family: var(--font-serif);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: #4A4A35;
+  margin-top: 1.75rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 2px solid #D8DBCE;
+  padding-bottom: 0.4rem;
+}
+.markdown-body h2 {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #4A4A35;
+  margin-top: 1.5rem;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown-body h3 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #5A5A40;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.markdown-body p {
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.75;
+  color: #5A5A48;
+}
+.markdown-body ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  color: #5A5A48;
+}
+.markdown-body ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  color: #5A5A48;
+}
+.markdown-body li {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.65;
+}
+.markdown-body strong {
+  font-weight: 700;
+  color: #4A4A35;
+  background-color: rgba(116, 142, 99, 0.12);
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.25rem;
+}
+.markdown-body blockquote {
+  border-left: 4px solid #748E63;
+  padding-left: 1.25rem;
+  font-style: italic;
+  color: #5A5A48;
+  margin: 1.25rem 0;
+  background-color: #F7F8F2;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  border-top: 1px solid #E9EBE0;
+  border-right: 1px solid #E9EBE0;
+  border-bottom: 1px solid #E9EBE0;
+}

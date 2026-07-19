@@ -1,0 +1,6 @@
+{
+  "name": "우리 집 태양광 에너지 자립도 분석 서비스",
+  "description": "우리 집의 총 전기 사용량과 실제 태양광 발전량 데이터를 바탕으로 에너지 자립도를 분석하고, AI 전문가의 친절한 피드백과 경제적/환경적 효과를 분석해 주는 서비스입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
