@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sun,
@@ -71,6 +71,7 @@ export default function App() {
   const [region, setRegion] = useState<string>("제주");
   const [consumption, setConsumption] = useState<number>(360); // Fixed average monthly consumption (12 kWh/day * 30 days)
   const [generation, setGeneration] = useState<number>(120); // Monthly solar generation in kWh, derived from sunshine hours
+  const isSuppressRecalc = useRef(false);
 
   // Sunshine hours & Address states
   const [sunshineHours, setSunshineHours] = useState<number>(4.0); // Daily sunshine hours
@@ -180,6 +181,7 @@ export default function App() {
 
   // Synchronize daily sunshineHours and static/dynamic values into generation/consumption for backend and UI metrics compatibility
   useEffect(() => {
+    if (isSuppressRecalc.current) return;
     // 3kW capacity * sunshineHours * 30 days * 0.75 efficiency
     const monthlyGen = Math.round(3 * sunshineHours * 0.75 * 30);
     setGeneration(monthlyGen);
@@ -258,6 +260,7 @@ export default function App() {
                   const detailAddr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
                   if (isMounted) {
                     setCurrentAddress(detailAddr);
+                    setIsManualRatio(false);
                     const detected = detectRegionFromAddress(detailAddr);
                     if (detected !== region) {
                       setRegion(detected);
@@ -365,6 +368,7 @@ export default function App() {
           }
           
           setCurrentAddress(detailAddr);
+          setIsManualRatio(false);
           const detected = detectRegionFromAddress(detailAddr);
           if (detected !== region) {
             setRegion(detected);
@@ -379,6 +383,7 @@ export default function App() {
       const detected = detectRegionFromAddress(searchAddress);
       setRegion(detected);
       setCurrentAddress(searchAddress);
+      setIsManualRatio(false);
       triggerToast(`[오프라인 모드] 입력하신 주소(${searchAddress})를 기반으로 ${detected} 기상 통계를 매칭합니다.`);
     }
   };
@@ -393,7 +398,7 @@ export default function App() {
 
   // Auto-calculated ratio based on consumption and generation
   const computedRatio = consumption > 0 
-    ? Math.min(100, Math.round((generation / consumption) * 1000) / 10) 
+    ? Math.round((generation / consumption) * 1000) / 10 
     : 0;
 
   const activeRatio = isManualRatio ? manualRatio : computedRatio;
@@ -555,6 +560,7 @@ export default function App() {
 
   // Load an item from history
   const handleLoadHistory = (item: HistoryItem) => {
+    isSuppressRecalc.current = true;
     setRegion(item.region);
     setConsumption(item.consumption);
     setGeneration(item.generation);
@@ -573,6 +579,10 @@ export default function App() {
     setSelectedHistoryId(item.id);
     setErrorMsg(null);
     triggerToast(`${item.date}에 저장된 전력 분석을 불러왔습니다! 🏡`);
+
+    setTimeout(() => {
+      isSuppressRecalc.current = false;
+    }, 100);
   };
 
   // Delete a history item
@@ -771,7 +781,8 @@ export default function App() {
                       max="2000"
                       onChange={(e) => {
                         const val = parseInt(e.target.value) || 0;
-                        setConsumption(Math.max(1, val));
+                        setConsumption(Math.min(2000, Math.max(1, val)));
+                        setIsManualRatio(false);
                       }}
                       className="w-20 text-right font-extrabold text-[#4A4A35] border border-[#D1D6BC] rounded-lg px-2 py-0.5 text-xs bg-white focus:outline-none focus:border-[#748E63] focus:ring-1 focus:ring-[#748E63]"
                     />
@@ -782,18 +793,21 @@ export default function App() {
                 <input
                   type="range"
                   min="50"
-                  max="1000"
+                  max="2000"
                   step="10"
                   value={consumption}
-                  onChange={(e) => setConsumption(parseInt(e.target.value))}
+                  onChange={(e) => {
+                    setConsumption(parseInt(e.target.value));
+                    setIsManualRatio(false);
+                  }}
                   className="w-full h-1.5 bg-[#E2E6D5] rounded-lg appearance-none cursor-pointer accent-[#748E63]"
                   id="consumption-slider"
                 />
 
                 <div className="flex justify-between text-[10px] text-[#8A8D7C] px-1 font-semibold">
                   <span>미니멀 (50 kWh)</span>
-                  <span>평균 (350 kWh)</span>
-                  <span>대형 (1000 kWh)</span>
+                  <span>평균 (360 kWh)</span>
+                  <span>대용량 (2000 kWh)</span>
                 </div>
 
                 {/* Quick Presets */}
@@ -808,6 +822,7 @@ export default function App() {
                         key={preset}
                         onClick={() => {
                           setConsumption(preset);
+                          setIsManualRatio(false);
                           triggerToast(`월 권장 전력 소비량 ${preset}kWh로 설정했습니다.`);
                         }}
                         className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
@@ -1048,21 +1063,21 @@ export default function App() {
                       {/* Solar Portion */}
                       {generation > 0 && (
                         <div
-                          style={{ width: `${Math.min(100, (generation / consumption) * 100)}%` }}
+                          style={{ width: `${(generation / Math.max(consumption, generation)) * 100}%` }}
                           className="bg-[#748E63] flex items-center justify-center transition-all duration-500"
                         >
-                          {Math.round(Math.min(100, (generation / consumption) * 100)) >= 15 && (
-                            <span>태양광 {Math.min(consumption, generation)}kWh</span>
+                          {Math.round((generation / Math.max(consumption, generation)) * 100) >= 15 && (
+                            <span>태양광 {generation}kWh</span>
                           )}
                         </div>
                       )}
                       {/* Bought portion from KEPCO */}
                       {gridPurchase > 0 && (
                         <div
-                          style={{ width: `${(gridPurchase / consumption) * 100}%` }}
+                          style={{ width: `${(gridPurchase / Math.max(consumption, generation)) * 100}%` }}
                           className="bg-[#5A5A48] flex items-center justify-center transition-all duration-500"
                         >
-                          {Math.round((gridPurchase / consumption) * 100) >= 15 && (
+                          {Math.round((gridPurchase / Math.max(consumption, generation)) * 100) >= 15 && (
                             <span>한전구입 {gridPurchase}kWh</span>
                           )}
                         </div>
