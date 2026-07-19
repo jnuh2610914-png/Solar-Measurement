@@ -66,6 +66,28 @@ const detectRegionFromAddress = (addr: string): string => {
   return "서울"; // default fallback
 };
 
+// Map consumption value (50 to 2000) to raw slider value s (0 to 100)
+const getSliderVal = (val: number): number => {
+  if (val <= 360) {
+    // map 50..360 to 0..50
+    return ((val - 50) / (360 - 50)) * 50;
+  } else {
+    // map 360..2000 to 50..100
+    return 50 + ((val - 360) / (2000 - 360)) * 50;
+  }
+};
+
+// Map raw slider value s (0 to 100) to consumption value (50 to 2000)
+const getConsumptionFromSlider = (s: number): number => {
+  let val = 50;
+  if (s <= 50) {
+    val = 50 + (s / 50) * (360 - 50);
+  } else {
+    val = 360 + ((s - 50) / 50) * (2000 - 360);
+  }
+  return Math.round(val);
+};
+
 export default function App() {
   // Input states
   const [region, setRegion] = useState<string>("제주");
@@ -202,8 +224,10 @@ export default function App() {
           setHasGeminiKey(!!config.hasGeminiKey);
         }
         
-        const kakaoApiKey = config.kakaoApiKey;
-        if (!kakaoApiKey) {
+        const kakaoApiKey = "YOUR_KAKAO_JAVASCRIPT_KEY";
+        const finalKey = kakaoApiKey !== "YOUR_KAKAO_JAVASCRIPT_KEY" && kakaoApiKey !== "" ? kakaoApiKey : config.kakaoApiKey;
+        
+        if (!finalKey) {
           console.warn("Kakao Map API Key is empty. Rendering fallback map.");
           setMapError(true);
           return;
@@ -308,7 +332,7 @@ export default function App() {
           
           script = document.createElement("script");
           script.id = scriptId;
-          script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoApiKey}&autoload=false&libraries=services`;
+          script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${finalKey}&autoload=false&libraries=services`;
           script.async = true;
           document.head.appendChild(script);
 
@@ -792,12 +816,13 @@ export default function App() {
 
                 <input
                   type="range"
-                  min="50"
-                  max="2000"
-                  step="10"
-                  value={consumption}
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={getSliderVal(consumption)}
                   onChange={(e) => {
-                    setConsumption(parseInt(e.target.value));
+                    const rawVal = parseFloat(e.target.value);
+                    setConsumption(getConsumptionFromSlider(rawVal));
                     setIsManualRatio(false);
                   }}
                   className="w-full h-1.5 bg-[#E2E6D5] rounded-lg appearance-none cursor-pointer accent-[#748E63]"
