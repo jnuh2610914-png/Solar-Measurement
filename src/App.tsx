@@ -55,8 +55,7 @@
           script = document.createElement("script");
           script.id = scriptId;
           // 💡 2. 'https:' 프로토콜을 명시하여 완벽한 경로로 주입합니다.
-          script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${finalKey}&autoload=false&libraries=services&host=solar-measurement-five.vercel.app`;          script.async = true;
-          document.head.appendChild(script);
+          script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${finalKey}&autoload=false&libraries=services`;          document.head.appendChild(script);
 
           script.onload = () => {
             initializeMap();
