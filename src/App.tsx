@@ -6,7 +6,10 @@ import {
   History,
   Trash2,
   Search,
-  Sliders
+  Sliders,
+  BotMessageSquare,
+  Lightbulb,
+  Zap
 } from "lucide-react";
 import Markdown from "react-markdown";
 
@@ -113,7 +116,6 @@ export default function App() {
 
   const [weatherLabel, setWeatherLabel] = useState<string>("조회 대기중 🌤️");
 
-  // 기상청 단기예보 동기화용 API 인증키 입력처
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
 
   const fetchLiveWeather = async (lat: number, lng: number) => {
@@ -164,14 +166,11 @@ export default function App() {
     setGeneration(monthlyGen);
   }, [sunshineHours]);
 
-  // 카카오 맵 패키지 대신 순수 웹 주소 검색 및 지오코딩 기능을 수행
   const handleAddressSearch = () => {
     if (!searchAddress.trim()) return;
     setCurrentAddress(searchAddress);
     const detected = detectRegionFromAddress(searchAddress);
     setRegion(detected);
-    
-    // 지도가 없으므로 기본 좌표(제주 기준 등) 스케줄로 실시간 날씨 데이터 트리거
     fetchLiveWeather(33.4996, 126.5312);
     triggerToast(`위치가 주소 기반으로 갱신되었습니다.`);
   };
@@ -180,10 +179,10 @@ export default function App() {
   const savedMoney = Math.round(generation * 200); 
 
   const getStatusInfo = (ratio: number) => {
-    if (ratio >= 100) return { label: "에너지 자립 영웅 🏆", color: "text-white bg-[#748E63] border-[#748E63]", desc: "사용하는 전기를 뛰어넘어 친환경 에너지를 생산 중이에요!" };
-    if (ratio >= 50) return { label: "우수 에너지 자립가 ⭐", color: "text-[#748E63] bg-[#F1F3E9] border-[#E2E6D5]", desc: "우리 집 절반 이상의 에너지를 태양광으로 자급자족하고 있습니다." };
-    if (ratio >= 20) return { label: "새싹 자립가 🌤️", color: "text-[#5A5A40] bg-[#F7F8F2] border-[#D1D6BC]", desc: "의미 있는 비율을 스스로 충당하며 가계와 환경을 살리고 있어요!" };
-    return { label: "초보 자립가 🔌", color: "text-[#8A8D7C] bg-[#F7F8F2] border-[#E9EBE0]", desc: "시작이 절반! 에너지 사용 요령을 터득해 자립률을 높여보아요." };
+    if (ratio >= 100) return { label: "에너지 자립 영웅 🏆", color: "text-white bg-[#748E63] border-[#748E63]", chartColor: "#748E63", desc: "사용하는 전기를 뛰어넘어 친환경 에너지를 생산 중이에요!" };
+    if (ratio >= 50) return { label: "우수 에너지 자립가 ⭐", color: "text-[#748E63] bg-[#F1F3E9] border-[#E2E6D5]", chartColor: "#8DA875", desc: "우리 집 절반 이상의 에너지를 태양광으로 자급자족하고 있습니다." };
+    if (ratio >= 20) return { label: "새싹 자립가 🌤️", color: "text-[#5A5A40] bg-[#F7F8F2] border-[#D1D6BC]", chartColor: "#B5C18E", desc: "의미 있는 비율을 스스로 충당하며 가계와 환경을 살리고 있어요!" };
+    return { label: "초보 자립가 🔌", color: "text-[#8A8D7C] bg-[#F7F8F2] border-[#E9EBE0]", chartColor: "#D1D6BC", desc: "시작이 절반! 에너지 사용 요령을 터득해 자립률을 높여보아요." };
   };
 
   const status = getStatusInfo(computedRatio);
@@ -193,9 +192,32 @@ export default function App() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+  const getAiAdvice = (ratio: number, consumption: number) => {
+    let adviceList = [];
+
+    if (ratio < 30) {
+      adviceList.push("💡 **발전 효율 개선**: 현재 자립도가 낮은 편입니다. 미니 태양광 패널 용량을 확충하거나 패널 각도를 남향 30~35도로 재조정해보세요.");
+      adviceList.push("⚡ **피크 시간대 절전**: 낮 시간(11시~15시) 태양광 직접 발전 전력을 활용해 세탁기나 건조기를 돌리면 누진세를 크게 줄일 수 있습니다.");
+    } else if (ratio < 70) {
+      adviceList.push("🌱 **훌륭한 에너지 관리**: 전력 사용량의 상당 부분을 스스로 충당하고 계십니다! 대기전력 차단 콘센트만 추가해도 자립도를 5~10% 더 올릴 수 있습니다.");
+      adviceList.push("☀️ **계절별 대응 전략**: 여름/겨울철 난방·냉방기 사용 시 태양광 피크 타임과 연동되는 스마트 플러그 도입을 추천합니다.");
+    } else {
+      adviceList.push("🏆 **완벽한 에너지 자립**: 완벽에 가까운 친환경 자립 상태입니다! Surplus(잉여) 전력이 발생할 경우 ESS(에너지저장장치) 도입이나 한전 이월을 고려해보세요.");
+      adviceList.push("🔄 **지속가능한 관리**: 패널 표면의 먼지나 이물질을 주기적으로 닦아주는 것만으로도 연간 3~5%의 발전량을 추가 확보할 수 있습니다.");
+    }
+
+    if (consumption > 400) {
+      adviceList.push("⚠️ **고소비 경고**: 월 소비량이 400kWh를 초과하여 전기요금 누진 구간에 진입했습니다. 고효율(1등급) 가전 교체를 적극 검토하세요.");
+    }
+
+    return adviceList;
+  };
+
   const handleAnalyze = async () => {
     setLoading(true);
     setTimeout(() => {
+      const aiAdvice = getAiAdvice(computedRatio, consumption);
+
       const analysisMarkdown = `## 🌱 ${region} 지역 실시간 에너지 자립 진단서
 
 기상청 예보[\`${weatherLabel}\`] 연동 분석 결과입니다.
@@ -207,7 +229,13 @@ export default function App() {
 * **태양광 자동 예측 발전량**: \`${generation} kWh\`
 * **최종 에너지 자립도**: **${computedRatio}%** 🥳
 
-> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 스스로 자급하고 있습니다.`;
+---
+
+### 🤖 AI 맞춤형 팩트 폭격 & 에너지 솔루션
+
+${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
+
+> 💡 **AI 종합 의견**: ${currentAddress}의 기상 조건과 소비 패턴을 고려할 때, 월 **${savedMoney.toLocaleString()}원**의 실질적 절감 효과가 발생합니다.`;
 
       setAnalysis(analysisMarkdown);
       
@@ -223,7 +251,7 @@ export default function App() {
       setHistory(prev => [newItem, ...prev]);
 
       setLoading(false);
-      triggerToast("AI 진단서 작성이 완료되었습니다! 🌱");
+      triggerToast("AI 정밀 진단 및 조언 작성이 완료되었습니다! 🌱");
     }, 1500);
   };
 
@@ -232,6 +260,11 @@ export default function App() {
     setHistory(prev => prev.filter(item => item.id !== id));
     triggerToast("기록이 삭제되었습니다.");
   };
+
+  // SVG 원형 파이 차트 계산용
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (Math.min(computedRatio, 100) / 100) * circumference;
 
   return (
     <div className="min-h-screen bg-[#F7F8F2] font-sans text-[#4A4A35] pb-12">
@@ -247,7 +280,7 @@ export default function App() {
         <header className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4A4A35]">Solar Measurement</h1>
-            <p className="text-[#8A8D7C] text-sm mt-1.5">기상청 단기예보 실시간 API 연동 및 에너지 자립도 시뮬레이터 시스템</p>
+            <p className="text-[#8A8D7C] text-sm mt-1.5">기상청 단기예보 실시간 API 연동 및 AI 맞춤 솔루션 진단 시스템</p>
           </div>
           <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 bg-[#F1F3E9] border border-[#E2E6D5] hover:bg-[#E9EBE0] text-[#4A4A35] px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-sm">
             <History size={16} />
@@ -262,7 +295,7 @@ export default function App() {
             <section className="lg:col-span-5 space-y-6">
               <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
                 
-                {/* 현재 선택된 위치 알림창 (카카오 지도가 안전하게 제거되었습니다) */}
+                {/* 현재 위치 */}
                 <div className="bg-[#F7F8F2] p-5 rounded-2xl border border-[#E9EBE0] text-sm">
                   <div className="flex items-center gap-2 text-[#748E63] font-bold mb-1.5">
                     <MapPin size={16} />
@@ -274,7 +307,7 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* 주소 검색창 유지 */}
+                {/* 주소 검색창 */}
                 <div className="flex gap-2 relative">
                   <div className="relative flex-1">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8D7C]" />
@@ -291,7 +324,7 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* 월 전력 소비량 설정 (슬라이더 조절 + 키보드 직접 입력 가능 구조 구현) */}
+                {/* 월 전력 소비량 설정 */}
                 <div className="bg-white border border-[#E9EBE0] p-5 rounded-2xl flex flex-col gap-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-[#4A4A35] flex items-center gap-1.5">
@@ -325,9 +358,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 진단 시작 버튼 */}
+                {/* 진단 및 AI 조언 생성 버튼 */}
                 <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
-                  <Sparkles size={18} /> AI 에너지 자립도 정밀 진단 시작하기
+                  <BotMessageSquare size={18} /> AI 맞춤 조언 & 자립도 진단하기
                 </button>
               </div>
             </section>
@@ -338,13 +371,64 @@ export default function App() {
                 {loading && (
                   <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[350px] gap-4">
                     <div className="w-10 h-10 rounded-full border-4 border-t-[#748E63] animate-spin" />
-                    <p className="text-sm font-semibold text-[#4A4A35]">시뮬레이션 분석 중...</p>
+                    <p className="text-sm font-semibold text-[#4A4A35]">AI가 지역 기상 조건과 사용량을 분석해 맞춤 조언을 작성 중입니다...</p>
                   </div>
                 )}
               </AnimatePresence>
 
               {!loading && (
                 <div className="space-y-6">
+                  {/* 📊 새로 추가된 에너지 자립도 원형/선형 차트 시각화 영역 */}
+                  <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+                    {/* 원형 도넛 그래프 */}
+                    <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r={radius} stroke="#F1F3E9" strokeWidth="12" fill="transparent" />
+                        <motion.circle
+                          cx="60"
+                          cy="60"
+                          r={radius}
+                          stroke={status.chartColor}
+                          strokeWidth="12"
+                          strokeDasharray={circumference}
+                          initial={{ strokeDashoffset: circumference }}
+                          animate={{ strokeDashoffset }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          strokeLinecap="round"
+                          fill="transparent"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center justify-center text-center">
+                        <span className="text-2xl font-black text-[#4A4A35]">{computedRatio}%</span>
+                        <span className="text-[10px] font-bold text-[#8A8D7C]">자립율</span>
+                      </div>
+                    </div>
+
+                    {/* 에너지 자립 비중 바 시각화 */}
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="flex items-center gap-1.5 text-[#748E63]"><Zap size={14} /> 태양광 자급자족</span>
+                        <span>{generation} kWh / {consumption} kWh</span>
+                      </div>
+
+                      {/* 프로그레스 바 */}
+                      <div className="w-full h-4 bg-[#F1F3E9] rounded-full overflow-hidden p-0.5 border border-[#E9EBE0]">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: status.chartColor }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(computedRatio, 100)}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[11px] text-[#8A8D7C]">
+                        <span>0% (전량 구매)</span>
+                        <span>100% (완전 자립)</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">월간 태양광 발전</span><span className="text-xl font-black">{generation} kWh</span></div>
                     <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">에너지 자립도</span><span className="text-xl font-black text-[#748E63]">{computedRatio}%</span></div>
@@ -357,12 +441,13 @@ export default function App() {
                   </div>
 
                   {analysis ? (
-                    <div className="bg-white border rounded-[32px] p-6 shadow-sm prose text-sm text-[#5A5A40]">
+                    <div className="bg-white border rounded-[32px] p-6 shadow-sm prose text-sm text-[#5A5A40] leading-relaxed">
                       <Markdown>{analysis}</Markdown>
                     </div>
                   ) : (
-                    <div className="bg-white border rounded-[32px] p-8 text-center text-[#8A8D7C] text-sm min-h-[200px] flex items-center justify-center border-dashed">
-                      주소를 검색해 자립도 정밀 진단을 시작해 보세요.
+                    <div className="bg-white border rounded-[32px] p-8 text-center text-[#8A8D7C] text-sm min-h-[160px] flex flex-col items-center justify-center border-dashed gap-2">
+                      <Lightbulb size={24} className="text-[#748E63]" />
+                      <span>주소를 검색하고 **[AI 맞춤 조언 & 자립도 진단하기]** 버튼을 눌러보세요.</span>
                     </div>
                   )}
                 </div>
@@ -370,7 +455,7 @@ export default function App() {
             </section>
           </div>
         ) : (
-          /* 진단 기록 보관함 화면 그대로 보존 */
+          /* 진단 기록 보관함 */
           <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm min-h-[400px]">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-[#4A4A35]">
               <History size={20} className="text-[#748E63]" /> 진단 기록 보관함
