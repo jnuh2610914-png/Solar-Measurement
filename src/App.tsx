@@ -1,23 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Sun,
-  Zap,
-  Trees,
   MapPin,
-  RotateCcw,
   Sparkles,
-  History,
-  ArrowRight,
-  Info,
-  Leaf,
-  Landmark,
-  ChevronRight,
-  CheckCircle2,
-  Trash2,
-  Download,
-  AlertCircle,
-  Gauge,
   Search,
   Sliders
 } from "lucide-react";
@@ -58,16 +43,6 @@ function convertToGrid(lat: number, lng: number) {
     x: Math.floor(ra * Math.sin(theta) + XO + 0.5),
     y: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5)
   };
-}
-
-interface HistoryItem {
-  id: string;
-  date: string;
-  region: string;
-  consumption: number;
-  generation: number;
-  ratio: number;
-  analysis: string;
 }
 
 interface RegionPreset {
@@ -142,7 +117,6 @@ export default function App() {
   const KAKAO_API_KEY = "••••••••••••••••••••••••••••••••"; 
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
 
-  // 기상청 실시간 단기예보 동기화 함수
   const fetchLiveWeather = async (lat: number, lng: number) => {
     try {
       const grid = convertToGrid(lat, lng);
@@ -191,7 +165,7 @@ export default function App() {
     setGeneration(monthlyGen);
   }, [sunshineHours]);
 
-  // 카카오 지도 완전 수립 로직
+  // 카카오 지도 연동 로직
   useEffect(() => {
     if (!KAKAO_API_KEY || KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") return;
 
@@ -321,7 +295,7 @@ export default function App() {
     setTimeout(() => {
       const analysisMarkdown = `## 🌱 ${region} 지역 실시간 에너지 자립 진단서
 
-기상청 실시간 센서[\`${weatherLabel}\`]와 연동하여 분석한 결과입니다.
+기상청 예보[\`${weatherLabel}\`] 연동 분석 결과입니다.
 
 ---
 
@@ -365,7 +339,7 @@ export default function App() {
           <section className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
               
-              {/* 카카오 맵 고정 영역 (너비와 높이를 확실히 줘서 무조건 뜨게 잡음) */}
+              {/* 카카오 맵 영역 */}
               <div className="w-full h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative bg-stone-100">
                 <div id="kakao-map" className="w-full h-full min-h-[256px]"></div>
               </div>
@@ -378,7 +352,7 @@ export default function App() {
                 </div>
                 <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
                 <p className="text-xs text-[#8A8D7C] leading-relaxed">
-                  지도를 클릭하거나 주소를 검색하면 기상청 실시간 예보를 받아와 자동으로 일조량을 계산합니다.
+                  지도를 클릭하거나 주소를 검색하면 자동으로 일조량이 자동 동기화됩니다.
                 </p>
               </div>
 
@@ -424,17 +398,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ⚡ [수정완료] 일조 시간 슬라이더를 완전히 없애고 넣은 기상청 정보창 */}
-              <div className="bg-[#F1F3E9] border border-[#E2E6D5] p-4 rounded-xl flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-[#748E63]">☀️ 기상청 예보 센서 자동 계산</div>
-                  <div className="text-[#8A8D7C] mt-0.5">실시간 하늘 상태: <b className="text-[#4A4A35]">{weatherLabel}</b></div>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-[#748E63] bg-white px-2 py-1 rounded-md border">{sunshineHours} 시간</span>
-                  <div className="text-[9px] text-[#8A8D7C] mt-1">일조량 반영 완료</div>
-                </div>
-              </div>
+              {/* ⚡ [수정 완료] 기존의 주황색 '일평균 일조 시간 설정' 카드박스 코드를 완벽히 통째로 삭제했습니다! */}
 
               {/* 진단 시작 버튼 */}
               <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
