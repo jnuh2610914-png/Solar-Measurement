@@ -25,14 +25,14 @@ import Markdown from "react-markdown";
 
 // 위경도를 기상청 격자 좌표(NX, NY)로 변환하는 공식 함수
 function convertToGrid(lat: number, lng: number) {
-  const RE = 6371.00877; // 지구 반경(km)
-  const GRID = 5.0; // 격자 간격(km)
-  const SLAT1 = 30.0; // 투영 위도1(degree)
-  const SLAT2 = 60.0; // 투영 위도2(degree)
-  const OLON = 126.0; // 기준점 경도(degree)
-  const OLAT = 38.0; // 기준점 위도(degree)
-  const XO = 43; // 기준점 X좌표(GRID)
-  const YO = 136; // 기준점 Y좌표(GRID)
+  const RE = 6371.00877; 
+  const GRID = 5.0; 
+  const SLAT1 = 30.0; 
+  const SLAT2 = 60.0; 
+  const OLON = 126.0; 
+  const OLAT = 38.0; 
+  const XO = 43; 
+  const YO = 136; 
 
   const DEGRAD = Math.PI / 180.0;
   const re = RE / GRID;
@@ -90,16 +90,14 @@ const REGION_PRESETS: RegionPreset[] = [
 
 const detectRegionFromAddress = (addr: string): string => {
   if (addr.includes("제주")) return "제주";
+  if (addr.includes("서울")) return "서울";
   if (addr.includes("부산")) return "부산";
   if (addr.includes("인천")) return "인천";
   if (addr.includes("광주")) return "광주";
   if (addr.includes("대전")) return "대전";
   if (addr.includes("경기")) return "경기";
   if (addr.includes("강원")) return "강원";
-  if (addr.includes("대구") || addr.includes("울산") || addr.includes("경북") || addr.includes("경남")) return "부산";
-  if (addr.includes("충남") || addr.includes("충북") || addr.includes("세종")) return "대전";
-  if (addr.includes("전남") || addr.includes("전북")) return "광주";
-  return "서울";
+  return "제주";
 };
 
 const getSliderVal = (val: number): number => {
@@ -116,14 +114,11 @@ export default function App() {
   const [region, setRegion] = useState<string>("제주");
   const [consumption, setConsumption] = useState<number>(360); 
   const [generation, setGeneration] = useState<number>(120); 
-  const isSuppressRecalc = useRef(false);
 
-  const [sunshineHours, setSunshineHours] = useState<number>(4.0); 
+  // 기상청 데이터로 완전 자동 연동되는 일조시간 상태
+  const [sunshineHours, setSunshineHours] = useState<number>(3.8); 
   const [searchAddress, setSearchAddress] = useState<string>("");
   const [currentAddress, setCurrentAddress] = useState<string>("제주특별자치도 제주시 첨단로 242");
-
-  const [isManualRatio, setIsManualRatio] = useState<boolean>(false);
-  const [manualRatio, setManualRatio] = useState<number>(34.3);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<number>(0);
@@ -144,7 +139,7 @@ export default function App() {
     "강원": { lat: 37.8859, lng: 127.7300 }
   };
 
-  const [weatherLabel, setWeatherLabel] = useState<string>("맑음 ☀️");
+  const [weatherLabel, setWeatherLabel] = useState<string>("실시간 연동 대기중 🌤️");
   const [weatherLoading, setWeatherLoading] = useState<boolean>(false);
 
   // ==========================================
@@ -153,7 +148,7 @@ export default function App() {
   const KAKAO_API_KEY = "••••••••••••••••••••••••••••••••"; 
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
 
-  // 기상청 실시간 단기예보 동기화 함수 (위도, 경도 기반)
+  // 기상청 실시간 단기예보 동기화 함수
   const fetchLiveWeather = async (lat: number, lng: number) => {
     setWeatherLoading(true);
     try {
@@ -161,7 +156,6 @@ export default function App() {
       const now = new Date();
       const baseDate = now.toISOString().slice(0, 10).replace(/-/g, "");
       
-      // 안전한 기본 데이터 조회를 위해 오전 05시 예보 데이터 기준 호출
       const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${encodeURIComponent(WEATHER_API_KEY)}&pageNo=1&numOfRows=50&dataType=JSON&base_date=${baseDate}&base_time=0500&nx=${grid.x}&ny=${grid.y}`;
 
       const res = await fetch(url);
@@ -178,75 +172,54 @@ export default function App() {
           if (skyVal === 1) {
             setWeatherLabel("맑음 ☀️");
             setSunshineHours(Math.round(basePreset.radiation * 1.2 * 10) / 10);
-            triggerToast("기상청 실시간 예보: 맑음! 태양광 발전 효율이 향상됩니다. ☀️");
+            triggerToast("기상청 API 연동: 오늘 하늘 맑음! 발전 효율 120% 상승 ☀️");
           } else if (skyVal === 3) {
             setWeatherLabel("구름많음 ⛅");
             setSunshineHours(Math.round(basePreset.radiation * 0.7 * 10) / 10);
-            triggerToast("기상청 실시간 예보: 구름 많음. 발전 효율이 다소 완화됩니다. ⛅");
+            triggerToast("기상청 API 연동: 구름 많음. 발전 효율 70% 반영 ⛅");
           } else {
             setWeatherLabel("흐림 ☁️");
             setSunshineHours(Math.round(basePreset.radiation * 0.3 * 10) / 10);
-            triggerToast("기상청 실시간 예보: 흐림/비. 일조량이 감소합니다. ☁️");
+            triggerToast("기상청 API 연동: 현재 흐림/비. 일조 조건 최소 반영 ☁️");
           }
         }
       } else {
-        throw new Error("API Header Error");
+        throw new Error();
       }
     } catch (err) {
-      console.warn("기상청 API 연동 실패, 지역 기본값 대체");
       const basePreset = REGION_PRESETS.find(p => p.name === region) || { radiation: 3.5 };
       setSunshineHours(basePreset.radiation);
-      setWeatherLabel("기본값 통계 🌤️");
+      setWeatherLabel("통계 평균치 반영 🌤️");
     } finally {
       setWeatherLoading(false);
     }
   };
 
-  // 단순 지역 토글 시 기본 날씨 세팅
+  // 일조 시간 변경 시 월간 태양광 발전량 자동 계산
   useEffect(() => {
-    const coords = REGION_COORDS[region] || REGION_COORDS["제주"];
-    if (WEATHER_API_KEY && WEATHER_API_KEY !== "여기에_진짜_기상청_인증키_입력") {
-      fetchLiveWeather(coords.lat, coords.lng);
-    } else {
-      const basePreset = REGION_PRESETS.find(p => p.name === region) || { radiation: 3.5 };
-      setSunshineHours(basePreset.radiation);
-      setWeatherLabel("수동 모드 🌤️");
-    }
-  }, [region]);
-
-  useEffect(() => {
-    if (isSuppressRecalc.current) return;
     const monthlyGen = Math.round(3 * sunshineHours * 0.75 * 30);
     setGeneration(monthlyGen);
   }, [sunshineHours]);
 
-  // 카카오 지도 완전 독립 로드 로직
+  // 카카오 지도 완전 수립 로직 (HTML 삽입 방식 보강)
   useEffect(() => {
-    let isMounted = true;
-    let mapInstance: any = null;
+    if (!KAKAO_API_KEY || KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") return;
 
-    if (!KAKAO_API_KEY || KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") {
-      return;
-    }
+    const coords = REGION_COORDS[region] || REGION_COORDS["제주"];
 
-    const initializeMap = () => {
-      const container = document.getElementById("kakao-map");
-      if (!container || !(window as any).kakao || !(window as any).kakao.maps) return;
+    const startMap = () => {
+      if (!(window as any).kakao || !(window as any).kakao.maps) return;
 
-      const coords = REGION_COORDS[region] || REGION_COORDS["제주"];
-      
       (window as any).kakao.maps.load(() => {
-        if (!isMounted) return;
+        const container = document.getElementById("kakao-map");
+        if (!container) return;
+
+        container.innerHTML = "";
         const options = {
           center: new (window as any).kakao.maps.LatLng(coords.lat, coords.lng),
-          level: 8
+          level: 7
         };
-        
-        container.innerHTML = "";
-        mapInstance = new (window as any).kakao.maps.Map(container, options);
-
-        const zoomControl = new (window as any).kakao.maps.ZoomControl();
-        mapInstance.addControl(zoomControl, (window as any).kakao.maps.ControlPosition.RIGHT);
+        const mapInstance = new (window as any).kakao.maps.Map(container, options);
 
         const markerPosition = new (window as any).kakao.maps.LatLng(coords.lat, coords.lng);
         const marker = new (window as any).kakao.maps.Marker({
@@ -256,39 +229,33 @@ export default function App() {
         marker.setMap(mapInstance);
 
         const infowindow = new (window as any).kakao.maps.InfoWindow({
-          content: `<div style="padding:8px 12px; font-size:12px; font-weight:bold; color:#4A4A35; text-align:center; min-width:180px;">태양광 진단 위치 ☀️</div>`
+          content: `<div style="padding:6px; font-size:12px; font-weight:bold; text-align:center; min-width:150px;">태양광 측정 지점</div>`
         });
         infowindow.open(mapInstance, marker);
 
-        const updateData = (lat: number, lng: number) => {
+        const handleCoordChange = (lat: number, lng: number) => {
           const geocoder = new (window as any).kakao.maps.services.Geocoder();
           geocoder.coord2Address(lng, lat, (result: any, status: any) => {
             if (status === (window as any).kakao.maps.services.Status.OK) {
               const detailAddr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-              if (isMounted) {
-                setCurrentAddress(detailAddr);
-                setIsManualRatio(false);
-                const detected = detectRegionFromAddress(detailAddr);
-                if (detected !== region) setRegion(detected);
-                
-                infowindow.setContent(`<div style="padding:8px 12px; font-size:12px; font-weight:bold; color:#4A4A35; text-align:center; max-width:200px;">${detailAddr}</div>`);
-                infowindow.open(mapInstance, marker);
-                
-                fetchLiveWeather(lat, lng);
-              }
+              setCurrentAddress(detailAddr);
+              const detected = detectRegionFromAddress(detailAddr);
+              setRegion(detected);
+              infowindow.setContent(`<div style="padding:6px; font-size:12px; font-weight:bold; text-align:center; max-width:180px;">${detailAddr}</div>`);
+              infowindow.open(mapInstance, marker);
+              fetchLiveWeather(lat, lng);
             }
           });
         };
 
-        (window as any).kakao.maps.event.addListener(mapInstance, 'click', (mouseEvent: any) => {
-          const latlng = mouseEvent.getLatLng();
-          marker.setPosition(latlng);
-          updateData(latlng.getLat(), latlng.getLng());
+        (window as any).kakao.maps.event.addListener(mapInstance, 'click', (e: any) => {
+          marker.setPosition(e.latLng);
+          handleCoordChange(e.latLng.getLat(), e.latLng.getLng());
         });
 
         (window as any).kakao.maps.event.addListener(marker, 'dragend', () => {
-          const latlng = marker.getPosition();
-          updateData(latlng.getLat(), latlng.getLng());
+          const pos = marker.getPosition();
+          handleCoordChange(pos.getLat(), pos.getLng());
         });
 
         (window as any).currentMapInstance = mapInstance;
@@ -298,21 +265,18 @@ export default function App() {
     };
 
     if ((window as any).kakao && (window as any).kakao.maps) {
-      initializeMap();
+      startMap();
     } else {
       const script = document.createElement("script");
       script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_API_KEY}&autoload=false&libraries=services`;
       script.async = true;
       document.head.appendChild(script);
-      script.onload = initializeMap;
+      script.onload = startMap;
     }
-
-    return () => { isMounted = false; };
-  }, [region]);
+  }, []);
 
   const handleAddressSearch = () => {
     if (!searchAddress.trim()) return;
-    
     if ((window as any).kakao && (window as any).kakao.maps?.services) {
       const geocoder = new (window as any).kakao.maps.services.Geocoder();
       geocoder.addressSearch(searchAddress, (result: any, status: any) => {
@@ -330,30 +294,20 @@ export default function App() {
             mapInstance.setCenter(loc);
             marker.setPosition(loc);
             if (infowindow) {
-              infowindow.setContent(`<div style="padding:8px 12px; font-size:12px; font-weight:bold; color:#4A4A35; text-align:center; max-width:200px;">${detailAddr}</div>`);
+              infowindow.setContent(`<div style="padding:6px; font-size:12px; font-weight:bold; text-align:center; max-width:180px;">${detailAddr}</div>`);
               infowindow.open(mapInstance, marker);
             }
           }
-          
           setCurrentAddress(detailAddr);
-          setIsManualRatio(false);
           const detected = detectRegionFromAddress(detailAddr);
-          if (detected !== region) setRegion(detected);
+          setRegion(detected);
           fetchLiveWeather(lat, lng);
         }
       });
     }
   };
 
-  const loadingMessages = [
-    "태양광 발전에 알맞은 날씨와 지역적 특성을 AI가 분석하고 있습니다... ☀️",
-    "이산화탄소 감축량과 소나무 식목 환산 효과를 꼼꼼히 확인하고 있어요... 🌱",
-    "이 가정이 얻고 있는 경제적 혜택과 절감 효과를 종합적으로 산정 중입니다... 💰",
-    "앞으로 자립도를 200% 더 끌어올릴 수 있는 실생활 실천 꿀팁을 작성하고 있어요... 💡",
-  ];
-
   const computedRatio = consumption > 0 ? Math.round((generation / consumption) * 1000) / 10 : 0;
-  const activeRatio = isManualRatio ? manualRatio : computedRatio;
   const savedMoney = Math.round(generation * 200); 
   const co2Reduction = (generation * 0.441).toFixed(1); 
   const pineTrees = (parseFloat(co2Reduction) / 6.6).toFixed(1); 
@@ -365,14 +319,7 @@ export default function App() {
     return { label: "초보 자립가 🔌", color: "text-[#8A8D7C] bg-[#F7F8F2] border-[#E9EBE0]", desc: "시작이 절반! 에너지 사용 요령을 터득해 자립률을 높여보아요." };
   };
 
-  const status = getStatusInfo(activeRatio);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("solar_independence_history");
-    if (saved) {
-      setHistory(JSON.parse(saved));
-    }
-  }, []);
+  const status = getStatusInfo(computedRatio);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -382,72 +329,36 @@ export default function App() {
   const handleAnalyze = async () => {
     setLoading(true);
     setTimeout(() => {
-      const finalGen = generation;
-      const finalRatio = activeRatio;
-      const finalMoney = savedMoney.toLocaleString();
+      const analysisMarkdown = `## 🌱 ${region} 지역 실시간 에너지 자립 진단서
 
-      const analysisMarkdown = `## 🌱 ${region} 지역 가정을 위한 태양광 자립 정밀 분석 결과
-
-안녕하세요! ${region}의 기상 조건[\`${weatherLabel}\`] 하에서 태양광 에너지를 멋지게 실천하고 계시는 가정의 에너지 자립도를 분석해 드립니다. ☀️
+기상청 단기예보 실시간 센서[\`${weatherLabel}\`]와 연결하여 해당 가정의 당월 자립도를 정밀 검측하였습니다.
 
 ---
 
-### 📊 우리 집 에너지 자립도 성적표
-* **우리 집 전체 전기 사용량**: \`${consumption} kWh\`
-* **실제 태양광 발전량**: \`${finalGen} kWh\`
-* **에너지 자립도**: **${finalRatio}%** 👏
+### 📊 종합 분석 스코어
+* **월 평균 전기 사용량**: \`${consumption} kWh\`
+* **태양광 자동 예측 발전량**: \`${generation} kWh\`
+* **최종 에너지 자립도**: **${computedRatio}%** 🥳
 
-> **"우리 집 전체 전기 사용량 중 무려 ${finalRatio}%를 친환경 태양광 발전기로 직접 해결하셨습니다!"**  
-현재 기상청 실시간 기상 상태와 전력 요율을 바탕으로 진단한 결과, 매우 훌륭한 환경 기여도를 달성하고 계십니다.
-
----
-
-### 💰 지갑을 지키는 경제적 이득 (한 달 환산)
-- **추정 전기요금 절감액**: **약 ${finalMoney}원** 💸
-  - 태양광 자급자족을 통해 외부 전력 구매량을 줄임과 동시에, 전력 누진 단계 진입을 차단하는 효과적인 경제 방패 역할을 해내고 있습니다.
+> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 외부 탄소 발전원 없이 스스로 자급하는 훌륭한 저탄소 에너지를 실천하고 있습니다.
 
 ---
 
-### 🌳 지구를 살리는 초록빛 지구 지킴이 효과
-- **이산화탄소(CO2) 감축량**: **약 ${co2Reduction} kg** 🌱
-- **소나무 식재 환산**: **약 ${pineTrees}그루**를 한 해 동안 심고 가꾼 소중한 가치와 같습니다.`;
+### 💰 가계 절감 경제 효과
+- **당월 요금 절감액**: **약 ${savedMoney.toLocaleString()}원** 절감 💸
+- 탄소 배출 절감량 **${co2Reduction}kg** 및 **소나무 ${pineTrees}그루**를 한 해 동안 심은 것과 동일한 자연 복원 효과를 창출했습니다.`;
 
       setAnalysis(analysisMarkdown);
-
-      const newItem: HistoryItem = {
-        id: "analysis-" + Date.now(),
-        date: new Date().toLocaleDateString("ko-KR"),
-        region,
-        consumption,
-        generation,
-        ratio: finalRatio,
-        analysis: analysisMarkdown,
-      };
-
-      const updatedHistory = [newItem, ...history];
-      setHistory(updatedHistory);
-      localStorage.setItem("solar_independence_history", JSON.stringify(updatedHistory));
-      setSelectedHistoryId(newItem.id);
-      triggerToast("AI 전문가의 자립도 정밀 진단서가 생성되었습니다! 🌱");
       setLoading(false);
-    }, 2000);
-  };
-
-  const handleLoadHistory = (item: HistoryItem) => {
-    isSuppressRecalc.current = true;
-    setRegion(item.region);
-    setConsumption(item.consumption);
-    setGeneration(item.generation);
-    setAnalysis(item.analysis);
-    setSelectedHistoryId(item.id);
-    setTimeout(() => { isSuppressRecalc.current = false; }, 100);
+      triggerToast("AI 진단서 작성이 완료되었습니다! 🌱");
+    }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-[#F7F8F2] font-sans text-[#4A4A35] pb-12">
       <AnimatePresence>
         {toastMsg && (
-          <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#4A4A35] text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium border border-[#5A5A40]">
+          <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }} className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#4A4A35] text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium">
             {toastMsg}
           </motion.div>
         )}
@@ -463,53 +374,81 @@ export default function App() {
           {/* LEFT PANEL */}
           <section className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
-              <div className="flex justify-between items-center border-b pb-3">
-                <span className="font-bold text-sm">실시간 지도 & 날씨 센서</span>
-                <span className="text-xs font-bold bg-[#F1F3E9] text-[#748E63] px-2.5 py-1 rounded-full border">
-                  {weatherLoading ? "조회중..." : weatherLabel}
-                </span>
+              
+              {/* 카카오 맵 고정 영역 */}
+              <div className="h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative">
+                <div id="kakao-map" className="w-full h-full min-h-[256px] bg-stone-100 z-10"></div>
               </div>
 
-              {/* MAP DIV */}
-              <div className="h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm">
-                <div id="kakao-map" className="w-full h-full min-h-[240px] bg-stone-100 flex items-center justify-center text-xs text-stone-400">
-                  { (KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") ? "⚠️ 코드를 열고 KAKAO_API_KEY를 입력해주세요." : "지도 로딩 중..." }
+              {/* 현재 선택된 위치 알림창 (보내주신 사진의 둥근 카드 형태) */}
+              <div className="bg-[#F7F8F2] p-5 rounded-2xl border border-[#E9EBE0] text-sm">
+                <div className="flex items-center gap-2 text-[#748E63] font-bold mb-1.5">
+                  <MapPin size={16} />
+                  <span>현재 선택된 위치:</span>
                 </div>
+                <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
+                <p className="text-xs text-[#8A8D7C] leading-relaxed">
+                  지도를 마우스로 직접 클릭하거나 핀을 드래그하여 상세 주소 및 실시간 기상 데이터를 자동으로 갱신할 수 있습니다!
+                </p>
               </div>
 
-              <div className="bg-[#F7F8F2] p-3 rounded-xl border text-xs text-[#4A4A35]">
-                <b>📍 분석 주소:</b> {currentAddress}
+              {/* 주소 검색창 */}
+              <div className="flex gap-2 relative">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8D7C]" />
+                  <input
+                    type="text"
+                    value={searchAddress}
+                    onChange={(e) => setSearchAddress(e.target.value)}
+                    placeholder="예: 제주시 첨단로 242"
+                    className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-[#E9EBE0] rounded-xl focus:outline-none focus:border-[#748E63]"
+                  />
+                </div>
+                <button onClick={handleAddressSearch} className="bg-[#4A4A35] hover:bg-[#3d3d2c] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-sm transition-all">
+                  검색
+                </button>
               </div>
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchAddress}
-                  onChange={(e) => setSearchAddress(e.target.value)}
-                  placeholder="예: 제주시 첨단로 242"
-                  className="flex-1 pl-3 pr-4 py-2 text-sm bg-[#F7F8F2] border rounded-xl focus:outline-none focus:border-[#748E63]"
-                />
-                <button onClick={handleAddressSearch} className="bg-[#4A4A35] text-white px-4 py-2 rounded-xl text-sm font-semibold">검색</button>
-              </div>
-
-              <div className="bg-[#F7F8F2] p-4 rounded-2xl flex flex-col gap-3">
+              {/* 월 전력 소비량 설정 슬라이더 */}
+              <div className="bg-white border border-[#E9EBE0] p-5 rounded-2xl flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-[#8A8D7C]">🏡 월 전력 소비량</span>
-                  <span className="text-sm font-extrabold bg-white px-2.5 py-1 rounded-lg border">{consumption} kWh</span>
+                  <span className="text-sm font-bold text-[#4A4A35] flex items-center gap-1.5">
+                    <Sliders size={15} className="text-[#8A8D7C]" /> 월 전력 소비량 설정
+                  </span>
+                  <span className="text-sm font-extrabold bg-[#F7F8F2] px-3 py-1 rounded-lg border border-[#E9EBE0] text-[#4A4A35] shadow-inner">
+                    {consumption} kWh
+                  </span>
                 </div>
-                <input type="range" min="0" max="100" value={getSliderVal(consumption)} onChange={(e) => setConsumption(getConsumptionFromSlider(parseInt(e.target.value)))} className="accent-[#748E63] cursor-pointer" />
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value={getSliderVal(consumption)} 
+                  onChange={(e) => setConsumption(getConsumptionFromSlider(parseInt(e.target.value)))} 
+                  className="accent-[#748E63] cursor-pointer w-full h-1.5 bg-[#E9EBE0] rounded-lg appearance-none" 
+                />
+                <div className="flex justify-between text-[11px] text-[#8A8D7C]">
+                  <span>50 kWh (최소)</span>
+                  <span>360 kWh (평균)</span>
+                  <span>2,000 kWh (최대)</span>
+                </div>
               </div>
 
-              <div className="bg-[#F7F8F2] p-4 rounded-2xl flex flex-col gap-2">
-                <div className="flex justify-between text-xs font-bold text-[#8A8D7C]">
-                  <span>☀️ 현재 날씨 기반 하루 일조 시간</span>
-                  <span className="text-[#4A4A35] bg-white px-2 py-0.5 rounded border">{sunshineHours} 시간</span>
+              {/* 💡 날씨 예보 연동 상태 브리핑 카드 (일조량 슬라이더 대신 들어간 자동 계산 UI) */}
+              <div className="bg-[#F1F3E9] border border-[#E2E6D5] p-4 rounded-xl flex items-center justify-between text-xs">
+                <div>
+                  <div className="font-bold text-[#748E63]">기상청 단기예보 연동 센서 활성화</div>
+                  <div className="text-[#8A8D7C] mt-0.5">선택 지점 실시간 기상: <b className="text-[#4A4A35]">{weatherLabel}</b></div>
                 </div>
-                <p className="text-[10px] text-[#8A8D7C]">지도를 클릭하거나 주소를 검색하면 기상청 실시간 위성 예보에 맞춰 일조량이 완전 자동으로 조절됩니다.</p>
+                <div className="text-right">
+                  <span className="text-sm font-black text-[#748E63] bg-white px-2 py-1 rounded-md border">{sunshineHours} 시간</span>
+                  <div className="text-[9px] text-[#8A8D7C] mt-1">자동 계산 완료</div>
+                </div>
               </div>
 
-              <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-3.5 rounded-2xl font-semibold shadow-md transition-all">
-                AI 에너지 자립도 정밀 진단 시작하기
+              {/* 진단 시작 버튼 */}
+              <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
+                <Sparkles size={18} /> AI 에너지 자립도 정밀 진단 시작하기
               </button>
             </div>
           </section>
@@ -518,9 +457,9 @@ export default function App() {
           <section className="lg:col-span-7 space-y-6">
             <AnimatePresence>
               {loading && (
-                <div className="bg-white/90 border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[350px] gap-4">
                   <div className="w-10 h-10 rounded-full border-4 border-t-[#748E63] animate-spin" />
-                  <p className="text-sm font-semibold text-[#4A4A35]">{loadingMessages[loadingStep]}</p>
+                  <p className="text-sm font-semibold text-[#4A4A35]">기상청 위성 날씨 데이터를 기반으로 연간 자립 효율을 시뮬레이션 중입니다...</p>
                 </div>
               )}
             </AnimatePresence>
@@ -528,14 +467,14 @@ export default function App() {
             {!loading && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block">월간 태양광 발전</span><span className="text-lg font-black">{generation} kWh</span></div>
-                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block">에너지 자립도</span><span className="text-lg font-black text-[#748E63]">{activeRatio}%</span></div>
-                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block">예상 절감 금액</span><span className="text-lg font-black">약 {savedMoney.toLocaleString()}원</span></div>
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">월간 태양광 발전</span><span className="text-xl font-black">{generation} kWh</span></div>
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">에너지 자립도</span><span className="text-xl font-black text-[#748E63]">{computedRatio}%</span></div>
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">예상 절감 금액</span><span className="text-xl font-black">약 {savedMoney.toLocaleString()}원</span></div>
                 </div>
 
-                <div className={`p-5 rounded-2xl border ${status.color}`}>
+                <div className={`p-5 rounded-2xl border ${status.color} shadow-sm`}>
                   <h4 className="text-base font-black">{status.label}</h4>
-                  <p className="text-xs mt-1">{status.desc}</p>
+                  <p className="text-xs mt-1 leading-relaxed">{status.desc}</p>
                 </div>
 
                 {analysis ? (
@@ -543,8 +482,8 @@ export default function App() {
                     <Markdown>{analysis}</Markdown>
                   </div>
                 ) : (
-                  <div className="bg-white border rounded-[32px] p-8 text-center text-[#8A8D7C] text-sm min-h-[200px] flex items-center justify-center">
-                    지도를 클릭해 주소를 불러온 뒤, 진단 시작하기 버튼을 눌러주세요.
+                  <div className="bg-white border rounded-[32px] p-8 text-center text-[#8A8D7C] text-sm min-h-[200px] flex items-center justify-center border-dashed">
+                    지도를 클릭하거나 주소를 검색해 자립도 정밀 진단을 시작해 보세요.
                   </div>
                 )}
               </div>
