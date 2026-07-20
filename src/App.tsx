@@ -89,7 +89,7 @@ export default function App() {
   const [consumption, setConsumption] = useState<number>(360); 
   const [generation, setGeneration] = useState<number>(120); 
 
-  // 기상청 데이터로 완전 자동 연동되는 일조시간 상태
+  // 자동 동기화용 일조시간 상태
   const [sunshineHours, setSunshineHours] = useState<number>(3.8); 
   const [searchAddress, setSearchAddress] = useState<string>("");
   const [currentAddress, setCurrentAddress] = useState<string>("제주특별자치도 제주시 첨단로 242");
@@ -112,7 +112,7 @@ export default function App() {
   const [weatherLabel, setWeatherLabel] = useState<string>("조회 대기중 🌤️");
 
   // ==========================================
-  // ⭐ [필수 수정] 여기에 본인의 카카오 및 기상청 API 키를 정확히 입력하세요!
+  // ⭐ 여기에 본인의 카카오 및 기상청 API 키를 정확히 입력하세요!
   // ==========================================
   const KAKAO_API_KEY = "••••••••••••••••••••••••••••••••"; 
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
@@ -304,13 +304,7 @@ export default function App() {
 * **태양광 자동 예측 발전량**: \`${generation} kWh\`
 * **최종 에너지 자립도**: **${computedRatio}%** 🥳
 
-> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 스스로 자급하고 있습니다.
-
----
-
-### 💰 가계 절감 경제 효과
-- **당월 요금 절감액**: **약 ${savedMoney.toLocaleString()}원** 절감 💸
-- 탄소 배출 절감량 **${co2Reduction}kg** 및 **소나무 ${pineTrees}그루** 효과를 창출했습니다.`;
+> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 외부 탄소 발전원 없이 스스로 자급하고 있습니다.`;
 
       setAnalysis(analysisMarkdown);
       setLoading(false);
@@ -352,7 +346,7 @@ export default function App() {
                 </div>
                 <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
                 <p className="text-xs text-[#8A8D7C] leading-relaxed">
-                  지도를 클릭하거나 주소를 검색하면 자동으로 일조량이 자동 동기화됩니다.
+                  지도를 마우스로 직접 클릭하거나 핀을 드래그하여 상세 주소 및 실시간 기상 데이터를 자동으로 갱신할 수 있습니다!
                 </p>
               </div>
 
@@ -398,9 +392,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ⚡ [수정 완료] 기존의 주황색 '일평균 일조 시간 설정' 카드박스 코드를 완벽히 통째로 삭제했습니다! */}
-
-              {/* 진단 시작 버튼 */}
+              {/* 진단 시작 버튼 (월 전력 소비량 카드 아래에 바로 오도록 주황색 카드 요소를 완벽 삭제했습니다) */}
               <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
                 <Sparkles size={18} /> AI 에너지 자립도 정밀 진단 시작하기
               </button>
