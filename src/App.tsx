@@ -9,7 +9,8 @@ import {
   Sliders,
   BotMessageSquare,
   Lightbulb,
-  Zap
+  Zap,
+  Info
 } from "lucide-react";
 import Markdown from "react-markdown";
 
@@ -109,6 +110,7 @@ export default function App() {
   const [currentAddress, setCurrentAddress] = useState<string>("제주특별자치도 제주시 첨단로 242");
 
   const [loading, setLoading] = useState<boolean>(false);
+  const [chartLoading, setChartLoading] = useState<boolean>(false); 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -119,6 +121,7 @@ export default function App() {
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
 
   const fetchLiveWeather = async (lat: number, lng: number) => {
+    setChartLoading(true);
     try {
       const grid = convertToGrid(lat, lng);
       const now = new Date();
@@ -158,10 +161,11 @@ export default function App() {
       const basePreset = REGION_PRESETS.find(p => p.name === region) || { radiation: 3.5 };
       setSunshineHours(basePreset.radiation);
       setWeatherLabel("기본 통계치 🌤️");
+    } finally {
+      setTimeout(() => setChartLoading(false), 400);
     }
   };
 
-  // ⚡ 실시간 수치 자동 계산
   useEffect(() => {
     const monthlyGen = Math.round(3 * sunshineHours * 0.75 * 30);
     setGeneration(monthlyGen);
@@ -176,7 +180,6 @@ export default function App() {
     triggerToast(`위치가 주소 기반으로 갱신되었습니다.`);
   };
 
-  // ⚡ 0.01초 만에 실시간 계산되는 자립율 및 절감 금액
   const computedRatio = consumption > 0 ? Math.round((generation / consumption) * 1000) / 10 : 0;
   const savedMoney = Math.round(generation * 200); 
 
@@ -194,32 +197,31 @@ export default function App() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const getAiAdvice = (ratio: number, consumption: number) => {
+  const getEasyDailyAdvice = (ratio: number, consumption: number) => {
     let adviceList = [];
 
-    if (ratio < 30) {
-      adviceList.push("💡 **발전 효율 개선**: 현재 자립도가 낮은 편입니다. 미니 태양광 패널 용량을 확충하거나 패널 각도를 남향 30~35도로 재조정해보세요.");
-      adviceList.push("⚡ **피크 시간대 절전**: 낮 시간(11시~15시) 태양광 직접 발전 전력을 활용해 세탁기나 건조기를 돌리면 누진세를 크게 줄일 수 있습니다.");
-    } else if (ratio < 70) {
-      adviceList.push("🌱 **훌륭한 에너지 관리**: 전력 사용량의 상당 부분을 스스로 충당하고 계십니다! 대기전력 차단 콘센트만 추가해도 자립도를 5~10% 더 올릴 수 있습니다.");
-      adviceList.push("☀️ **계절별 대응 전략**: 여름/겨울철 난방·냉방기 사용 시 태양광 피크 타임과 연동되는 스마트 플러그 도입을 추천합니다.");
+    adviceList.push("☀️ **낮 시간 전원 집중하기**: 태양광 발전이 가장 활발한 낮 11시~오후 3시 사이에 세탁기 작동이나 보조배터리 충전을 해보세요.");
+    
+    if (ratio < 40) {
+      adviceList.push("🔌 **스위치형 멀티탭 활용하기**: 쓰지 않는 TV 셋톱박스나 가전 플러그만 꺼두어도 한 달에 전기 사용량을 약 5~10% 줄일 수 있어요.");
+      adviceList.push("💡 **LED 조명 교체하기**: 자주 켜두는 거실이나 주방 전등을 LED로 바꿔주는 것만으로도 전기 요금을 쉽게 아낄 수 있습니다.");
     } else {
-      adviceList.push("🏆 **완벽한 에너지 자립**: 완벽에 가까운 친환경 자립 상태입니다! Surplus(잉여) 전력이 발생할 경우 ESS(에너지저장장치) 도입이나 한전 이월을 고려해보세요.");
-      adviceList.push("🔄 **지속가능한 관리**: 패널 표면의 먼지나 이물질을 주기적으로 닦아주는 것만으로도 연간 3~5%의 발전량을 추가 확보할 수 있습니다.");
+      adviceList.push("🧼 **세탁은 모아서 찬물로**: 세탁기 전력의 90%는 물을 끓이는 데 쓰입니다. 찬물 코스로 세탁해도 충분히 깨끗해져요!");
+      adviceList.push("🌾 **밥솥 보온시간 줄이기**: 밥솥을 하루 종일 보온 모드로 두기보다 먹을 만큼만 덜고 냉동 보관 후 전자레인지에 데워 드시면 전력이 크게 절약됩니다.");
     }
 
     if (consumption > 400) {
-      adviceList.push("⚠️ **고소비 경고**: 월 소비량이 400kWh를 초과하여 전기요금 누진 구간에 진입했습니다. 고효율(1등급) 가전 교체를 적극 검토하세요.");
+      adviceList.push("❄️ **냉장고 적정 온도 설정**: 냉장실은 60%만 채우고, 냉동실은 꽉 채워두는 것이 냉기 보존과 전력 절감에 큰 도움이 됩니다.");
     }
 
     return adviceList;
   };
 
-  // ⚡ 지연 시간 없이 AI 조언 리포트만 생성
   const handleAnalyze = () => {
     setLoading(true);
+    setChartLoading(true);
     setTimeout(() => {
-      const aiAdvice = getAiAdvice(computedRatio, consumption);
+      const dailyAdvice = getEasyDailyAdvice(computedRatio, consumption);
 
       const analysisMarkdown = `## 🌱 ${region} 지역 실시간 에너지 자립 진단서
 
@@ -234,11 +236,11 @@ export default function App() {
 
 ---
 
-### 🤖 AI 맞춤형 팩트 폭격 & 에너지 솔루션
+### 🌿 일상에서 바로 쓰는 AI 실천 조언
 
-${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
+${dailyAdvice.map(tip => `* ${tip}`).join("\n\n")}
 
-> 💡 **AI 종합 의견**: ${currentAddress}의 기상 조건과 소비 패턴을 고려할 때, 월 **${savedMoney.toLocaleString()}원**의 실질적 절감 효과가 발생합니다.`;
+> 💡 **AI 생활 가이드**: 작은 습관 변화만으로도 ${currentAddress} 자택에서 월 약 **${savedMoney.toLocaleString()}원**의 절감 효과를 기대할 수 있습니다.`;
 
       setAnalysis(analysisMarkdown);
       
@@ -254,8 +256,9 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
       setHistory(prev => [newItem, ...prev]);
 
       setLoading(false);
-      triggerToast("AI 상세 조언 리포트 생성이 완료되었습니다! 🌱");
-    }, 400); // 지연 시간을 0.4초로 최소화
+      setChartLoading(false);
+      triggerToast("AI 실천 조언 생성이 완료되었습니다! 🌱");
+    }, 500);
   };
 
   const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
@@ -264,7 +267,6 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
     triggerToast("기록이 삭제되었습니다.");
   };
 
-  // SVG 원형 파이 차트 계산용
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (Math.min(computedRatio, 100) / 100) * circumference;
@@ -283,7 +285,7 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
         <header className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4A4A35]">Solar Measurement</h1>
-            <p className="text-[#8A8D7C] text-sm mt-1.5">실시간 반응형 에너지 자립도 & AI 솔루션 진단 시스템</p>
+            <p className="text-[#8A8D7C] text-sm mt-1.5">실시간 반응형 에너지 자립도 & AI 맞춤 생활 가이드 시스템</p>
           </div>
           <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 bg-[#F1F3E9] border border-[#E2E6D5] hover:bg-[#E9EBE0] text-[#4A4A35] px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-sm">
             <History size={16} />
@@ -361,59 +363,88 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
                   </div>
                 </div>
 
-                {/* AI 상세 분석 리포트 버튼 */}
+                {/* AI 절감 조언 생성 버튼 */}
                 <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
-                  <BotMessageSquare size={18} /> AI 상세 절감 리포트 생성하기
+                  <BotMessageSquare size={18} /> AI 일상 절감 조언 보기
                 </button>
               </div>
             </section>
 
-            {/* RIGHT PANEL (⚡ 실시간 즉시 반응 영역) */}
+            {/* RIGHT PANEL */}
             <section className="lg:col-span-7 space-y-6">
               <div className="space-y-6">
-                {/* 📊 즉시 반응하는 원형 & 선형 실시간 차트 */}
-                <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
-                  <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                      <circle cx="60" cy="60" r={radius} stroke="#F1F3E9" strokeWidth="12" fill="transparent" />
-                      <motion.circle
-                        cx="60"
-                        cy="60"
-                        r={radius}
-                        stroke={status.chartColor}
-                        strokeWidth="12"
-                        strokeDasharray={circumference}
-                        animate={{ strokeDashoffset }}
-                        transition={{ duration: 0.2, ease: "easeOut" }} // 애니메이션도 즉시 즉시 반응하도록 빠른 속도로 설정
-                        strokeLinecap="round"
-                        fill="transparent"
-                      />
-                    </svg>
-                    <div className="absolute flex flex-col items-center justify-center text-center">
-                      <span className="text-2xl font-black text-[#4A4A35]">{computedRatio}%</span>
-                      <span className="text-[10px] font-bold text-[#8A8D7C]">자립율</span>
+                
+                {/* 📊 자립률 차트 & 로딩 화면 영역 */}
+                <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row items-center gap-6 relative">
+                    
+                    {/* 🔄 자립률 로딩 오버레이 */}
+                    <AnimatePresence>
+                      {chartLoading && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 bg-white/90 backdrop-blur-[2px] z-10 rounded-2xl flex flex-col items-center justify-center gap-2"
+                        >
+                          <div className="w-8 h-8 border-3 border-[#748E63] border-t-transparent rounded-full animate-spin" />
+                          <span className="text-xs font-bold text-[#748E63]">자립률 계산 중...</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* 원형 그래프 */}
+                    <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r={radius} stroke="#F1F3E9" strokeWidth="12" fill="transparent" />
+                        <motion.circle
+                          cx="60"
+                          cy="60"
+                          r={radius}
+                          stroke={status.chartColor}
+                          strokeWidth="12"
+                          strokeDasharray={circumference}
+                          animate={{ strokeDashoffset }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          strokeLinecap="round"
+                          fill="transparent"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center justify-center text-center">
+                        <span className="text-2xl font-black text-[#4A4A35]">{computedRatio}%</span>
+                        <span className="text-[10px] font-bold text-[#8A8D7C]">자립율</span>
+                      </div>
+                    </div>
+
+                    {/* 막대그래프 */}
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="flex items-center gap-1.5 text-[#748E63]"><Zap size={14} /> 태양광 자급자족 비율</span>
+                        <span>{generation} kWh / {consumption} kWh</span>
+                      </div>
+
+                      <div className="w-full h-4 bg-[#F1F3E9] rounded-full overflow-hidden p-0.5 border border-[#E9EBE0]">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: status.chartColor }}
+                          animate={{ width: `${Math.min(computedRatio, 100)}%` }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[11px] text-[#8A8D7C]">
+                        <span>0% (전량 구매)</span>
+                        <span>100% (완전 자립)</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex-1 w-full space-y-3">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="flex items-center gap-1.5 text-[#748E63]"><Zap size={14} /> 태양광 자급자족 비율</span>
-                      <span>{generation} kWh / {consumption} kWh</span>
-                    </div>
-
-                    <div className="w-full h-4 bg-[#F1F3E9] rounded-full overflow-hidden p-0.5 border border-[#E9EBE0]">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: status.chartColor }}
-                        animate={{ width: `${Math.min(computedRatio, 100)}%` }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                      />
-                    </div>
-
-                    <div className="flex justify-between items-center text-[11px] text-[#8A8D7C]">
-                      <span>0% (전량 구매)</span>
-                      <span>100% (완전 자립)</span>
-                    </div>
+                  {/* 💡 [추가] 에너지 자립률 개요 하단 설명 박스 */}
+                  <div className="bg-[#F7F8F2] border border-[#E9EBE0] rounded-xl p-3 flex items-start gap-2.5 text-xs text-[#8A8D7C]">
+                    <Info size={15} className="text-[#748E63] mt-0.5 flex-shrink-0" />
+                    <p className="leading-relaxed">
+                      <strong className="text-[#4A4A35]">에너지 자립률이란?</strong> 우리 집에서 한 달 동안 사용하는 총 전력량 대비 태양광으로 직접 만들어서 스스로 충당하는 전력의 비율(%)을 뜻합니다.
+                    </p>
                   </div>
                 </div>
 
@@ -428,11 +459,11 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
                   <p className="text-xs mt-1 leading-relaxed">{status.desc}</p>
                 </div>
 
-                {/* AI 리포트 출력 창 */}
+                {/* AI 일상 실천 리포트 출력 창 */}
                 {loading ? (
                   <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[160px] gap-3">
                     <div className="w-6 h-6 rounded-full border-2 border-t-[#748E63] animate-spin" />
-                    <p className="text-xs font-semibold text-[#8A8D7C]">AI 솔루션 작성 중...</p>
+                    <p className="text-xs font-semibold text-[#8A8D7C]">AI 일상 조언 작성 중...</p>
                   </div>
                 ) : analysis ? (
                   <div className="bg-white border rounded-[32px] p-6 shadow-sm prose text-sm text-[#5A5A40] leading-relaxed">
@@ -441,7 +472,7 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
                 ) : (
                   <div className="bg-white border rounded-[32px] p-6 text-center text-[#8A8D7C] text-sm flex flex-col items-center justify-center border-dashed gap-2">
                     <Lightbulb size={20} className="text-[#748E63]" />
-                    <span className="text-xs">더 자세한 분석 팁이 필요하시면 **[AI 상세 절감 리포트 생성하기]**를 눌러주세요.</span>
+                    <span className="text-xs">일상에서 쉽게 바로 실천할 수 있는 팁을 확인해보려면 **[AI 일상 절감 조언 보기]**를 누르세요.</span>
                   </div>
                 )}
               </div>
