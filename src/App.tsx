@@ -161,6 +161,7 @@ export default function App() {
     }
   };
 
+  // ⚡ 실시간 수치 자동 계산
   useEffect(() => {
     const monthlyGen = Math.round(3 * sunshineHours * 0.75 * 30);
     setGeneration(monthlyGen);
@@ -175,6 +176,7 @@ export default function App() {
     triggerToast(`위치가 주소 기반으로 갱신되었습니다.`);
   };
 
+  // ⚡ 0.01초 만에 실시간 계산되는 자립율 및 절감 금액
   const computedRatio = consumption > 0 ? Math.round((generation / consumption) * 1000) / 10 : 0;
   const savedMoney = Math.round(generation * 200); 
 
@@ -213,7 +215,8 @@ export default function App() {
     return adviceList;
   };
 
-  const handleAnalyze = async () => {
+  // ⚡ 지연 시간 없이 AI 조언 리포트만 생성
+  const handleAnalyze = () => {
     setLoading(true);
     setTimeout(() => {
       const aiAdvice = getAiAdvice(computedRatio, consumption);
@@ -251,8 +254,8 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
       setHistory(prev => [newItem, ...prev]);
 
       setLoading(false);
-      triggerToast("AI 정밀 진단 및 조언 작성이 완료되었습니다! 🌱");
-    }, 1500);
+      triggerToast("AI 상세 조언 리포트 생성이 완료되었습니다! 🌱");
+    }, 400); // 지연 시간을 0.4초로 최소화
   };
 
   const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
@@ -280,7 +283,7 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
         <header className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-serif font-bold text-[#4A4A35]">Solar Measurement</h1>
-            <p className="text-[#8A8D7C] text-sm mt-1.5">기상청 단기예보 실시간 API 연동 및 AI 맞춤 솔루션 진단 시스템</p>
+            <p className="text-[#8A8D7C] text-sm mt-1.5">실시간 반응형 에너지 자립도 & AI 솔루션 진단 시스템</p>
           </div>
           <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 bg-[#F1F3E9] border border-[#E2E6D5] hover:bg-[#E9EBE0] text-[#4A4A35] px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-sm">
             <History size={16} />
@@ -303,7 +306,7 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
                   </div>
                   <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
                   <p className="text-xs text-[#8A8D7C] leading-relaxed">
-                    아래 검색창에 상세 주소를 입력하시면 해당 지역 데이터가 즉시 자동으로 반영됩니다.
+                    주소를 입력하시면 실시간 기상 일사량 데이터가 상단 수치에 즉시 연동됩니다.
                   </p>
                 </div>
 
@@ -358,100 +361,90 @@ ${aiAdvice.map(tip => `* ${tip}`).join("\n\n")}
                   </div>
                 </div>
 
-                {/* 진단 및 AI 조언 생성 버튼 */}
+                {/* AI 상세 분석 리포트 버튼 */}
                 <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
-                  <BotMessageSquare size={18} /> AI 맞춤 조언 & 자립도 진단하기
+                  <BotMessageSquare size={18} /> AI 상세 절감 리포트 생성하기
                 </button>
               </div>
             </section>
 
-            {/* RIGHT PANEL */}
+            {/* RIGHT PANEL (⚡ 실시간 즉시 반응 영역) */}
             <section className="lg:col-span-7 space-y-6">
-              <AnimatePresence>
-                {loading && (
-                  <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[350px] gap-4">
-                    <div className="w-10 h-10 rounded-full border-4 border-t-[#748E63] animate-spin" />
-                    <p className="text-sm font-semibold text-[#4A4A35]">AI가 지역 기상 조건과 사용량을 분석해 맞춤 조언을 작성 중입니다...</p>
+              <div className="space-y-6">
+                {/* 📊 즉시 반응하는 원형 & 선형 실시간 차트 */}
+                <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+                  <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r={radius} stroke="#F1F3E9" strokeWidth="12" fill="transparent" />
+                      <motion.circle
+                        cx="60"
+                        cy="60"
+                        r={radius}
+                        stroke={status.chartColor}
+                        strokeWidth="12"
+                        strokeDasharray={circumference}
+                        animate={{ strokeDashoffset }}
+                        transition={{ duration: 0.2, ease: "easeOut" }} // 애니메이션도 즉시 즉시 반응하도록 빠른 속도로 설정
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center text-center">
+                      <span className="text-2xl font-black text-[#4A4A35]">{computedRatio}%</span>
+                      <span className="text-[10px] font-bold text-[#8A8D7C]">자립율</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 w-full space-y-3">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="flex items-center gap-1.5 text-[#748E63]"><Zap size={14} /> 태양광 자급자족 비율</span>
+                      <span>{generation} kWh / {consumption} kWh</span>
+                    </div>
+
+                    <div className="w-full h-4 bg-[#F1F3E9] rounded-full overflow-hidden p-0.5 border border-[#E9EBE0]">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: status.chartColor }}
+                        animate={{ width: `${Math.min(computedRatio, 100)}%` }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center text-[11px] text-[#8A8D7C]">
+                      <span>0% (전량 구매)</span>
+                      <span>100% (완전 자립)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">월간 태양광 발전</span><span className="text-xl font-black">{generation} kWh</span></div>
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">에너지 자립도</span><span className="text-xl font-black text-[#748E63]">{computedRatio}%</span></div>
+                  <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">예상 절감 금액</span><span className="text-xl font-black">약 {savedMoney.toLocaleString()}원</span></div>
+                </div>
+
+                <div className={`p-5 rounded-2xl border ${status.color} shadow-sm transition-all duration-200`}>
+                  <h4 className="text-base font-black">{status.label}</h4>
+                  <p className="text-xs mt-1 leading-relaxed">{status.desc}</p>
+                </div>
+
+                {/* AI 리포트 출력 창 */}
+                {loading ? (
+                  <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[160px] gap-3">
+                    <div className="w-6 h-6 rounded-full border-2 border-t-[#748E63] animate-spin" />
+                    <p className="text-xs font-semibold text-[#8A8D7C]">AI 솔루션 작성 중...</p>
+                  </div>
+                ) : analysis ? (
+                  <div className="bg-white border rounded-[32px] p-6 shadow-sm prose text-sm text-[#5A5A40] leading-relaxed">
+                    <Markdown>{analysis}</Markdown>
+                  </div>
+                ) : (
+                  <div className="bg-white border rounded-[32px] p-6 text-center text-[#8A8D7C] text-sm flex flex-col items-center justify-center border-dashed gap-2">
+                    <Lightbulb size={20} className="text-[#748E63]" />
+                    <span className="text-xs">더 자세한 분석 팁이 필요하시면 **[AI 상세 절감 리포트 생성하기]**를 눌러주세요.</span>
                   </div>
                 )}
-              </AnimatePresence>
-
-              {!loading && (
-                <div className="space-y-6">
-                  {/* 📊 새로 추가된 에너지 자립도 원형/선형 차트 시각화 영역 */}
-                  <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
-                    {/* 원형 도넛 그래프 */}
-                    <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" r={radius} stroke="#F1F3E9" strokeWidth="12" fill="transparent" />
-                        <motion.circle
-                          cx="60"
-                          cy="60"
-                          r={radius}
-                          stroke={status.chartColor}
-                          strokeWidth="12"
-                          strokeDasharray={circumference}
-                          initial={{ strokeDashoffset: circumference }}
-                          animate={{ strokeDashoffset }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          strokeLinecap="round"
-                          fill="transparent"
-                        />
-                      </svg>
-                      <div className="absolute flex flex-col items-center justify-center text-center">
-                        <span className="text-2xl font-black text-[#4A4A35]">{computedRatio}%</span>
-                        <span className="text-[10px] font-bold text-[#8A8D7C]">자립율</span>
-                      </div>
-                    </div>
-
-                    {/* 에너지 자립 비중 바 시각화 */}
-                    <div className="flex-1 w-full space-y-3">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="flex items-center gap-1.5 text-[#748E63]"><Zap size={14} /> 태양광 자급자족</span>
-                        <span>{generation} kWh / {consumption} kWh</span>
-                      </div>
-
-                      {/* 프로그레스 바 */}
-                      <div className="w-full h-4 bg-[#F1F3E9] rounded-full overflow-hidden p-0.5 border border-[#E9EBE0]">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: status.chartColor }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(computedRatio, 100)}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                        />
-                      </div>
-
-                      <div className="flex justify-between items-center text-[11px] text-[#8A8D7C]">
-                        <span>0% (전량 구매)</span>
-                        <span>100% (완전 자립)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">월간 태양광 발전</span><span className="text-xl font-black">{generation} kWh</span></div>
-                    <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">에너지 자립도</span><span className="text-xl font-black text-[#748E63]">{computedRatio}%</span></div>
-                    <div className="bg-white border p-5 rounded-2xl shadow-sm"><span className="text-[11px] font-bold text-[#8A8D7C] block mb-1">예상 절감 금액</span><span className="text-xl font-black">약 {savedMoney.toLocaleString()}원</span></div>
-                  </div>
-
-                  <div className={`p-5 rounded-2xl border ${status.color} shadow-sm`}>
-                    <h4 className="text-base font-black">{status.label}</h4>
-                    <p className="text-xs mt-1 leading-relaxed">{status.desc}</p>
-                  </div>
-
-                  {analysis ? (
-                    <div className="bg-white border rounded-[32px] p-6 shadow-sm prose text-sm text-[#5A5A40] leading-relaxed">
-                      <Markdown>{analysis}</Markdown>
-                    </div>
-                  ) : (
-                    <div className="bg-white border rounded-[32px] p-8 text-center text-[#8A8D7C] text-sm min-h-[160px] flex flex-col items-center justify-center border-dashed gap-2">
-                      <Lightbulb size={24} className="text-[#748E63]" />
-                      <span>주소를 검색하고 **[AI 맞춤 조언 & 자립도 진단하기]** 버튼을 눌러보세요.</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              </div>
             </section>
           </div>
         ) : (
