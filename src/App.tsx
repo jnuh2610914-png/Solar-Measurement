@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import Markdown from "react-markdown";
 
-// 위경도를 기상청 격자 좌표(NX, NY)로 변환하는 공식 함수
 function convertToGrid(lat: number, lng: number) {
   const RE = 6371.00877; 
   const GRID = 5.0; 
@@ -121,12 +120,8 @@ export default function App() {
   const [currentAddress, setCurrentAddress] = useState<string>("제주특별자치도 제주시 첨단로 242");
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [loadingStep, setLoadingStep] = useState<number>(0);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
   const REGION_COORDS: { [key: string]: { lat: number; lng: number } } = {
     "제주": { lat: 33.4996, lng: 126.5312 },
@@ -139,8 +134,7 @@ export default function App() {
     "강원": { lat: 37.8859, lng: 127.7300 }
   };
 
-  const [weatherLabel, setWeatherLabel] = useState<string>("실시간 연동 대기중 🌤️");
-  const [weatherLoading, setWeatherLoading] = useState<boolean>(false);
+  const [weatherLabel, setWeatherLabel] = useState<string>("조회 대기중 🌤️");
 
   // ==========================================
   // ⭐ [필수 수정] 여기에 본인의 카카오 및 기상청 API 키를 정확히 입력하세요!
@@ -150,7 +144,6 @@ export default function App() {
 
   // 기상청 실시간 단기예보 동기화 함수
   const fetchLiveWeather = async (lat: number, lng: number) => {
-    setWeatherLoading(true);
     try {
       const grid = convertToGrid(lat, lng);
       const now = new Date();
@@ -166,21 +159,21 @@ export default function App() {
         const skyItem = items.find((i: any) => i.category === "SKY");
         
         if (skyItem) {
-          const skyVal = parseInt(skyItem.fcstValue); // 1: 맑음, 3: 구름많음, 4: 흐림
+          const skyVal = parseInt(skyItem.fcstValue); 
           const basePreset = REGION_PRESETS.find(p => p.name === region) || { radiation: 3.5 };
           
           if (skyVal === 1) {
             setWeatherLabel("맑음 ☀️");
             setSunshineHours(Math.round(basePreset.radiation * 1.2 * 10) / 10);
-            triggerToast("기상청 API 연동: 오늘 하늘 맑음! 발전 효율 120% 상승 ☀️");
+            triggerToast("기상청 데이터 반영: 맑음 ☀️");
           } else if (skyVal === 3) {
             setWeatherLabel("구름많음 ⛅");
             setSunshineHours(Math.round(basePreset.radiation * 0.7 * 10) / 10);
-            triggerToast("기상청 API 연동: 구름 많음. 발전 효율 70% 반영 ⛅");
+            triggerToast("기상청 데이터 반영: 구름많음 ⛅");
           } else {
             setWeatherLabel("흐림 ☁️");
             setSunshineHours(Math.round(basePreset.radiation * 0.3 * 10) / 10);
-            triggerToast("기상청 API 연동: 현재 흐림/비. 일조 조건 최소 반영 ☁️");
+            triggerToast("기상청 데이터 반영: 흐림 ☁️");
           }
         }
       } else {
@@ -189,19 +182,16 @@ export default function App() {
     } catch (err) {
       const basePreset = REGION_PRESETS.find(p => p.name === region) || { radiation: 3.5 };
       setSunshineHours(basePreset.radiation);
-      setWeatherLabel("통계 평균치 반영 🌤️");
-    } finally {
-      setWeatherLoading(false);
+      setWeatherLabel("기본 통계치 🌤️");
     }
   };
 
-  // 일조 시간 변경 시 월간 태양광 발전량 자동 계산
   useEffect(() => {
     const monthlyGen = Math.round(3 * sunshineHours * 0.75 * 30);
     setGeneration(monthlyGen);
   }, [sunshineHours]);
 
-  // 카카오 지도 완전 수립 로직 (HTML 삽입 방식 보강)
+  // 카카오 지도 완전 수립 로직
   useEffect(() => {
     if (!KAKAO_API_KEY || KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") return;
 
@@ -331,7 +321,7 @@ export default function App() {
     setTimeout(() => {
       const analysisMarkdown = `## 🌱 ${region} 지역 실시간 에너지 자립 진단서
 
-기상청 단기예보 실시간 센서[\`${weatherLabel}\`]와 연결하여 해당 가정의 당월 자립도를 정밀 검측하였습니다.
+기상청 실시간 센서[\`${weatherLabel}\`]와 연동하여 분석한 결과입니다.
 
 ---
 
@@ -340,13 +330,13 @@ export default function App() {
 * **태양광 자동 예측 발전량**: \`${generation} kWh\`
 * **최종 에너지 자립도**: **${computedRatio}%** 🥳
 
-> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 외부 탄소 발전원 없이 스스로 자급하는 훌륭한 저탄소 에너지를 실천하고 있습니다.
+> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 스스로 자급하고 있습니다.
 
 ---
 
 ### 💰 가계 절감 경제 효과
 - **당월 요금 절감액**: **약 ${savedMoney.toLocaleString()}원** 절감 💸
-- 탄소 배출 절감량 **${co2Reduction}kg** 및 **소나무 ${pineTrees}그루**를 한 해 동안 심은 것과 동일한 자연 복원 효과를 창출했습니다.`;
+- 탄소 배출 절감량 **${co2Reduction}kg** 및 **소나무 ${pineTrees}그루** 효과를 창출했습니다.`;
 
       setAnalysis(analysisMarkdown);
       setLoading(false);
@@ -375,12 +365,12 @@ export default function App() {
           <section className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
               
-              {/* 카카오 맵 고정 영역 */}
-              <div className="h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative">
-                <div id="kakao-map" className="w-full h-full min-h-[256px] bg-stone-100 z-10"></div>
+              {/* 카카오 맵 고정 영역 (너비와 높이를 확실히 줘서 무조건 뜨게 잡음) */}
+              <div className="w-full h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative bg-stone-100">
+                <div id="kakao-map" className="w-full h-full min-h-[256px]"></div>
               </div>
 
-              {/* 현재 선택된 위치 알림창 (보내주신 사진의 둥근 카드 형태) */}
+              {/* 현재 선택된 위치 알림창 */}
               <div className="bg-[#F7F8F2] p-5 rounded-2xl border border-[#E9EBE0] text-sm">
                 <div className="flex items-center gap-2 text-[#748E63] font-bold mb-1.5">
                   <MapPin size={16} />
@@ -388,7 +378,7 @@ export default function App() {
                 </div>
                 <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
                 <p className="text-xs text-[#8A8D7C] leading-relaxed">
-                  지도를 마우스로 직접 클릭하거나 핀을 드래그하여 상세 주소 및 실시간 기상 데이터를 자동으로 갱신할 수 있습니다!
+                  지도를 클릭하거나 주소를 검색하면 기상청 실시간 예보를 받아와 자동으로 일조량을 계산합니다.
                 </p>
               </div>
 
@@ -434,15 +424,15 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 💡 날씨 예보 연동 상태 브리핑 카드 (일조량 슬라이더 대신 들어간 자동 계산 UI) */}
+              {/* ⚡ [수정완료] 일조 시간 슬라이더를 완전히 없애고 넣은 기상청 정보창 */}
               <div className="bg-[#F1F3E9] border border-[#E2E6D5] p-4 rounded-xl flex items-center justify-between text-xs">
                 <div>
-                  <div className="font-bold text-[#748E63]">기상청 단기예보 연동 센서 활성화</div>
-                  <div className="text-[#8A8D7C] mt-0.5">선택 지점 실시간 기상: <b className="text-[#4A4A35]">{weatherLabel}</b></div>
+                  <div className="font-bold text-[#748E63]">☀️ 기상청 예보 센서 자동 계산</div>
+                  <div className="text-[#8A8D7C] mt-0.5">실시간 하늘 상태: <b className="text-[#4A4A35]">{weatherLabel}</b></div>
                 </div>
                 <div className="text-right">
                   <span className="text-sm font-black text-[#748E63] bg-white px-2 py-1 rounded-md border">{sunshineHours} 시간</span>
-                  <div className="text-[9px] text-[#8A8D7C] mt-1">자동 계산 완료</div>
+                  <div className="text-[9px] text-[#8A8D7C] mt-1">일조량 반영 완료</div>
                 </div>
               </div>
 
@@ -459,7 +449,7 @@ export default function App() {
               {loading && (
                 <div className="bg-white border rounded-[32px] p-8 text-center flex flex-col items-center justify-center min-h-[350px] gap-4">
                   <div className="w-10 h-10 rounded-full border-4 border-t-[#748E63] animate-spin" />
-                  <p className="text-sm font-semibold text-[#4A4A35]">기상청 위성 날씨 데이터를 기반으로 연간 자립 효율을 시뮬레이션 중입니다...</p>
+                  <p className="text-sm font-semibold text-[#4A4A35]">시뮬레이션 분석 중...</p>
                 </div>
               )}
             </AnimatePresence>
