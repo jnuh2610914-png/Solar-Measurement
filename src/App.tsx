@@ -1,8 +1,23 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  Sun,
+  Zap,
+  Trees,
   MapPin,
+  RotateCcw,
   Sparkles,
+  History,
+  ArrowRight,
+  Info,
+  Leaf,
+  Landmark,
+  ChevronRight,
+  CheckCircle2,
+  Trash2,
+  Download,
+  AlertCircle,
+  Gauge,
   Search,
   Sliders
 } from "lucide-react";
@@ -43,6 +58,16 @@ function convertToGrid(lat: number, lng: number) {
     x: Math.floor(ra * Math.sin(theta) + XO + 0.5),
     y: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5)
   };
+}
+
+interface HistoryItem {
+  id: string;
+  date: string;
+  region: string;
+  consumption: number;
+  generation: number;
+  ratio: number;
+  analysis: string;
 }
 
 interface RegionPreset {
@@ -97,6 +122,8 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState<boolean>(false);
 
   const REGION_COORDS: { [key: string]: { lat: number; lng: number } } = {
     "제주": { lat: 33.4996, lng: 126.5312 },
@@ -112,7 +139,7 @@ export default function App() {
   const [weatherLabel, setWeatherLabel] = useState<string>("조회 대기중 🌤️");
 
   // ==========================================
-  // ⭐ 여기에 본인의 카카오 및 기상청 API 키를 정확히 입력하세요!
+  // ⭐여기에 본인의 카카오 및 기상청 API 키를 입력하세요!
   // ==========================================
   const KAKAO_API_KEY = "••••••••••••••••••••••••••••••••"; 
   const WEATHER_API_KEY = "••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"; 
@@ -165,7 +192,7 @@ export default function App() {
     setGeneration(monthlyGen);
   }, [sunshineHours]);
 
-  // 카카오 지도 연동 로직
+  // 카카오 지도 로직 복구
   useEffect(() => {
     if (!KAKAO_API_KEY || KAKAO_API_KEY === "여기에_진짜_카카오_자바스크립트_키_입력") return;
 
@@ -304,12 +331,30 @@ export default function App() {
 * **태양광 자동 예측 발전량**: \`${generation} kWh\`
 * **최종 에너지 자립도**: **${computedRatio}%** 🥳
 
-> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 외부 탄소 발전원 없이 스스로 자급하고 있습니다.`;
+> 본 가정은 소비 전력량의 약 **${computedRatio}%**를 스스로 자급하고 있습니다.`;
 
       setAnalysis(analysisMarkdown);
+      
+      const newItem: HistoryItem = {
+        id: Date.now().toString(),
+        date: new Date().toLocaleDateString(),
+        region,
+        consumption,
+        generation,
+        ratio: computedRatio,
+        analysis: analysisMarkdown
+      };
+      setHistory(prev => [newItem, ...prev]);
+
       setLoading(false);
       triggerToast("AI 진단서 작성이 완료되었습니다! 🌱");
     }, 1500);
+  };
+
+  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHistory(prev => prev.filter(item => item.id !== id));
+    triggerToast("기록이 삭제되었습니다.");
   };
 
   return (
@@ -323,62 +368,70 @@ export default function App() {
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-4 pt-6">
-        <header className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm mb-8">
-          <h1 className="text-2xl font-serif font-bold text-[#4A4A35]">Solar Measurement</h1>
-          <p className="text-[#8A8D7C] text-sm mt-1.5">기상청 단기예보 실시간 API 연동 및 에너지 자립도 시뮬레이터 시스템</p>
+        <header className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-serif font-bold text-[#4A4A35]">Solar Measurement</h1>
+            <p className="text-[#8A8D7C] text-sm mt-1.5">기상청 단기예보 실시간 API 연동 및 에너지 자립도 시뮬레이터 시스템</p>
+          </div>
+          <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 bg-[#F1F3E9] border border-[#E2E6D5] hover:bg-[#E9EBE0] text-[#4A4A35] px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-sm">
+            <History size={16} />
+            {showHistory ? "대시보드 보기" : "기록 보관함"}
+            {history.length > 0 && <span className="bg-[#748E63] text-white text-xs px-2 py-0.5 rounded-full ml-1">{history.length}</span>}
+          </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* LEFT PANEL */}
-          <section className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
-              
-              {/* 카카오 맵 영역 */}
-              <div className="w-full h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative bg-stone-100">
-                <div id="kakao-map" className="w-full h-full min-h-[256px]"></div>
-              </div>
-
-              {/* 현재 선택된 위치 알림창 */}
-              <div className="bg-[#F7F8F2] p-5 rounded-2xl border border-[#E9EBE0] text-sm">
-                <div className="flex items-center gap-2 text-[#748E63] font-bold mb-1.5">
-                  <MapPin size={16} />
-                  <span>현재 선택된 위치:</span>
+        {!showHistory ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* LEFT PANEL */}
+            <section className="lg:col-span-5 space-y-6">
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-[#E9EBE0] flex flex-col gap-5">
+                
+                {/* 지도 영역 고정 */}
+                <div className="w-full h-64 rounded-2xl border border-[#E9EBE0] overflow-hidden shadow-sm relative bg-stone-100">
+                  <div id="kakao-map" className="w-full h-full min-h-[256px]"></div>
                 </div>
-                <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
-                <p className="text-xs text-[#8A8D7C] leading-relaxed">
-                  지도를 마우스로 직접 클릭하거나 핀을 드래그하여 상세 주소 및 실시간 기상 데이터를 자동으로 갱신할 수 있습니다!
-                </p>
-              </div>
 
-              {/* 주소 검색창 */}
-              <div className="flex gap-2 relative">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8D7C]" />
-                  <input
-                    type="text"
-                    value={searchAddress}
-                    onChange={(e) => setSearchAddress(e.target.value)}
-                    placeholder="예: 제주시 첨단로 242"
-                    className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-[#E9EBE0] rounded-xl focus:outline-none focus:border-[#748E63]"
-                  />
+                {/* 현재 선택된 위치 알림창 */}
+                <div className="bg-[#F7F8F2] p-5 rounded-2xl border border-[#E9EBE0] text-sm">
+                  <div className="flex items-center gap-2 text-[#748E63] font-bold mb-1.5">
+                    <MapPin size={16} />
+                    <span>현재 선택된 위치:</span>
+                  </div>
+                  <div className="font-extrabold text-base text-[#4A4A35] mb-2">{currentAddress}</div>
+                  <p className="text-xs text-[#8A8D7C] leading-relaxed">
+                    지도를 마우스로 직접 클릭하거나 핀을 드래그하여 상세 주소 및 실시간 기상 데이터를 자동으로 갱신할 수 있습니다!
+                  </p>
                 </div>
-                <button onClick={handleAddressSearch} className="bg-[#4A4A35] hover:bg-[#3d3d2c] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-sm transition-all">
-                  검색
-                </button>
-              </div>
 
-              {/* 월 전력 소비량 설정 슬라이더 */}
-              <div className="bg-white border border-[#E9EBE0] p-5 rounded-2xl flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-[#4A4A35] flex items-center gap-1.5">
-                    <Sliders size={15} className="text-[#8A8D7C]" /> 월 전력 소비량 설정
-                  </span>
-                  <span className="text-sm font-extrabold bg-[#F7F8F2] px-3 py-1 rounded-lg border border-[#E9EBE0] text-[#4A4A35] shadow-inner">
-                    {consumption} kWh
-                  </span>
+                {/* 주소 검색창 */}
+                <div className="flex gap-2 relative">
+                  <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8D7C]" />
+                    <input
+                      type="text"
+                      value={searchAddress}
+                      onChange={(e) => setSearchAddress(e.target.value)}
+                      placeholder="예: 제주시 첨단로 242"
+                      className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-[#E9EBE0] rounded-xl focus:outline-none focus:border-[#748E63]"
+                    />
+                  </div>
+                  <button onClick={handleAddressSearch} className="bg-[#4A4A35] hover:bg-[#3d3d2c] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-sm transition-all">
+                    검색
+                  </button>
                 </div>
-                <input 
-                  type="range" 
+
+                {/* 월 전력 소비량 설정 슬라이더 */}
+                <div className="bg-white border border-[#E9EBE0] p-5 rounded-2xl flex flex-col gap-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-[#4A4A35] flex items-center gap-1.5">
+                      <Sliders size={15} className="text-[#8A8D7C]" /> 월 전력 소비량 설정
+                    </span>
+                    <span className="text-sm font-extrabold bg-[#F7F8F2] px-3 py-1 rounded-lg border border-[#E9EBE0] text-[#4A4A35] shadow-inner">
+                      {consumption} kWh
+                    </span>
+                  </div>
+                  <input 
+                    type="range" 
                   min="0" 
                   max="100" 
                   value={getSliderVal(consumption)} 
@@ -392,7 +445,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 진단 시작 버튼 (월 전력 소비량 카드 아래에 바로 오도록 주황색 카드 요소를 완벽 삭제했습니다) */}
+              {/* 진단 시작 버튼 (주황색 일조시간 박스는 삭제완료) */}
               <button onClick={handleAnalyze} className="w-full bg-[#748E63] hover:bg-[#637d53] text-white py-4 rounded-2xl font-bold shadow-md text-base transition-all flex items-center justify-center gap-2">
                 <Sparkles size={18} /> AI 에너지 자립도 정밀 진단 시작하기
               </button>
@@ -436,6 +489,34 @@ export default function App() {
             )}
           </section>
         </div>
+        ) : (
+          /* 기록 보관함 화면 복구 */
+          <div className="bg-white border border-[#E9EBE0] rounded-[32px] p-6 shadow-sm min-h-[400px]">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-[#4A4A35]">
+              <History size={20} className="text-[#748E63]" /> 진단 기록 보관함
+            </h2>
+            {history.length === 0 ? (
+              <div className="text-center py-20 text-[#8A8D7C] text-sm">아직 저장된 진단 기록이 없습니다.</div>
+            ) : (
+              <div className="space-y-4">
+                {history.map(item => (
+                  <div key={item.id} onClick={() => { setAnalysis(item.analysis); setRegion(item.region); setConsumption(item.consumption); setGeneration(item.generation); setShowHistory(false); }} className="p-5 bg-[#F7F8F2] border border-[#E9EBE0] rounded-2xl cursor-pointer hover:border-[#748E63] transition-all flex justify-between items-center">
+                    <div>
+                      <div className="text-xs text-[#8A8D7C]">{item.date} • {item.region}</div>
+                      <div className="font-bold text-base mt-1 text-[#4A4A35]">소비 {item.consumption}kWh / 발전 {item.generation}kWh</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-lg font-black text-[#748E63]">{item.ratio}%</span>
+                      <button onClick={(e) => deleteHistoryItem(item.id, e)} className="text-[#8A8D7C] hover:text-red-500 p-1 transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
